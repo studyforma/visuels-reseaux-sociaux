@@ -1,0 +1,31 @@
+name: Photos libres de droits
+# Télécharge dans photos/ les images listées dans photos/a-telecharger.txt
+# (une ligne par photo : nom-du-fichier.jpg URL), puis vide la liste.
+on:
+  push:
+    paths: ["photos/a-telecharger.txt"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  telecharger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Télécharger
+        run: |
+          set -e
+          while read -r nom url; do
+            [ -z "$nom" ] && continue
+            case "$nom" in \#*) continue;; esac
+            curl -fsSL "$url" -o "photos/$nom"
+            echo "OK $nom"
+          done < photos/a-telecharger.txt
+          : > photos/a-telecharger.txt
+      - name: Enregistrer
+        run: |
+          git config user.name "photos-bot"
+          git config user.email "photos-bot@users.noreply.github.com"
+          git add photos
+          git diff --cached --quiet || git commit -m "Photos téléchargées"
+          git push
